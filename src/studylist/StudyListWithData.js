@@ -17,6 +17,7 @@ class StudyListWithData extends Component {
     studies: [],
     error: null,
     modalComponentId: null,
+    showUploadButton: true,
   };
 
   static propTypes = {
@@ -192,44 +193,64 @@ class StudyListWithData extends Component {
       return <div>Loading...</div>;
     }
 
-    let healthCareApiButtons = null;
-    let healthCareApiWindows = null;
+    const dicomStorePicker = (
+      <ConnectedDicomStorePicker
+        isOpen={this.state.modalComponentId === 'DicomStorePicker'}
+        onClose={this.closeModals}
+      />
+    );
 
-    // TODO: This should probably be a prop
-    if (window.config.enableGoogleCloudAdapter) {
-      healthCareApiWindows = (
-        <>
-          <ConnectedDicomStorePicker
-            isOpen={this.state.modalComponentId === 'DicomStorePicker'}
-            onClose={this.closeModals}
-          />
-          <ConnectedDicomFilesUploader
-            isOpen={this.state.modalComponentId === 'DicomFilesUploader'}
-            onClose={this.closeModals}
-          />
-        </>
-      );
+    const uploadWindow = (
+      <ConnectedDicomFilesUploader
+        isOpen={this.state.modalComponentId === 'DicomFilesUploader'}
+        onClose={this.closeModals}
+      />
+    );
 
-      healthCareApiButtons = (
-        <div
-          className="form-inline btn-group pull-right"
-          style={{ padding: '20px' }}
-        >
-          <button
-            className="btn btn-primary"
-            onClick={() => this.openModal('DicomStorePicker')}
-          >
-            {this.props.t('Change DICOM Store')}
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => this.openModal('DicomFilesUploader')}
-          >
-            {this.props.t('Upload Studies')}
-          </button>
-        </div>
-      );
-    }
+    const dicomStorePickerButton = (
+      <button
+        className="btn btn-primary"
+        onClick={() => this.openModal('DicomStorePicker')}
+      >
+        {this.props.t('Change DICOM Store')}
+      </button>
+    );
+
+    const uploadButton = (
+      <button
+        className="btn btn-primary"
+        onClick={() => this.openModal('DicomFilesUploader')}
+      >
+        {this.props.t('Upload Studies')}
+      </button>
+    );
+
+    const healthCareApiWindows = (
+      <>
+        {window.config.enableGoogleCloudAdapter ? (
+          dicomStorePicker
+        ) : (
+          <React.Fragment />
+        )}
+
+        {this.state.showUploadButton ? uploadWindow : <React.Fragment />}
+      </>
+    );
+
+    const healthCareApiButtons = (
+      <div
+        className="form-inline btn-group pull-right"
+        style={{ padding: '20px' }}
+      >
+        {window.config.enableGoogleCloudAdapter ? (
+          dicomStorePickerButton
+        ) : (
+          <React.Fragment />
+        )}
+
+        {this.state.showUploadButton ? uploadButton : <React.Fragment />}
+      </div>
+    );
 
     console.warn(this.state.studies);
 
@@ -238,7 +259,6 @@ class StudyListWithData extends Component {
         {this.state.studies ? (
           <StudyList
             studies={this.state.studies}
-            studyListFunctionsEnabled={false}
             onImport={this.onImport}
             onSelectItem={this.onSelectItem}
             pageSize={this.rowsPerPage}

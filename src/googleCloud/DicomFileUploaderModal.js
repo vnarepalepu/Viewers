@@ -32,7 +32,7 @@ class DicomFileUploaderModal extends Component {
       >
         <Modal.Header closeButton>
           <Modal.Title>
-            {this.props.t('Google Cloud Healthcare API - DICOM Upload')}
+            {this.props.t('Healthcare API - DICOM Upload')}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>

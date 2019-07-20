@@ -78,12 +78,20 @@ class DicomUploadService {
   }
 
   getClient(url) {
-    if (!this.oidcStorageKey) throw new Error('OIDC storage key is not set');
-    const accessToken = getOidcToken(this.oidcStorageKey);
-    if (!accessToken) throw new Error('OIDC access_token is not set');
+    // until we figure out what is the default authentication method....
+    // if (!this.oidcStorageKey)
+    //   throw new Error('OIDC storage key is not set');
+
+    const accessToken = getOidcToken(this.oidcStorageKey) || undefined;
+
+    let headers = {};
+    if (accessToken) {
+      headers.Authorization = 'Bearer ' + accessToken;
+    }
+
     return new api.DICOMwebClient({
       url,
-      headers: { Authorization: 'Bearer ' + accessToken },
+      headers,
     });
   }
 }
