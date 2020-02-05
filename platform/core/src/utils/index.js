@@ -8,6 +8,10 @@ import sortBy from './sortBy.js';
 import studyMetadataManager from './studyMetadataManager';
 import updateMetaDataManager from './updateMetaDataManager.js';
 import writeScript from './writeScript.js';
+import DicomLoaderService from './dicomLoaderService.js';
+import b64toBlob from './b64toBlob.js';
+import * as urlUtil from './urlUtil';
+import makeCancelable from './makeCancelable';
 
 const utils = {
   guid,
@@ -16,11 +20,15 @@ const utils = {
   addServers,
   sortBy,
   writeScript,
+  b64toBlob,
   StackManager,
   studyMetadataManager,
   // Updates WADO-RS metaDataManager
   updateMetaDataManager,
   DICOMTagDescriptions,
+  DicomLoaderService,
+  urlUtil,
+  makeCancelable,
 };
 
 export {
@@ -30,11 +38,15 @@ export {
   addServers,
   sortBy,
   writeScript,
+  b64toBlob,
   StackManager,
   studyMetadataManager,
   // Updates WADO-RS metaDataManager
   updateMetaDataManager,
   DICOMTagDescriptions,
+  DicomLoaderService,
+  urlUtil,
+  makeCancelable,
 };
 
 export default utils;

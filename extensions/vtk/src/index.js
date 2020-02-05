@@ -1,8 +1,13 @@
-import OHIFVTKViewport from './OHIFVTKViewport.js';
+import asyncComponent from './asyncComponent.js';
 import commandsModule from './commandsModule.js';
 import toolbarModule from './toolbarModule.js';
+import withCommandsManager from './withCommandsManager.js';
 // This feels weird
 // import loadLocales from './loadLocales';
+
+const OHIFVTKViewport = asyncComponent(() =>
+  import(/* webpackChunkName: "OHIFVTKViewport" */ './OHIFVTKViewport.js')
+);
 
 const vtkExtension = {
   /**
@@ -10,14 +15,14 @@ const vtkExtension = {
    */
   id: 'vtk',
 
-  getViewportModule() {
-    return OHIFVTKViewport;
+  getViewportModule({ commandsManager }) {
+    return withCommandsManager(OHIFVTKViewport, commandsManager);
   },
   getToolbarModule() {
     return toolbarModule;
   },
-  getCommandsModule() {
-    return commandsModule;
+  getCommandsModule({ commandsManager }) {
+    return commandsModule({ commandsManager });
   },
 };
 

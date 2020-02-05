@@ -15,11 +15,26 @@ class GoogleCloudApi {
   }
 
   get urlBase() {
-    return `https://healthcare.googleapis.com/v1beta1`;
+    return this.healthcareApiEndpoint || 'https://healthcare.googleapis.com/v1beta1';
+  }
+
+  set urlBase(url) {
+    this.healthcareApiEndpoint = url;
   }
 
   get urlBaseProject() {
     return this.urlBase + `/projects`;
+  }
+
+  getUrlBaseDicomWeb(project, location, dataset, dicomStore) {
+    return (
+      this.urlBase +
+      `/projects/${project}/locations/${location}/datasets/${dataset}/dicomStores/${dicomStore}/dicomWeb`
+    );
+  }
+
+  getUrlPath(project, location, dataset, dicomStore) {
+    `/projects/${project}/locations/${location}/datasets/${dataset}/dicomStores/${dicomStore}`;
   }
 
   async doRequest(urlStr, config = {}, params = {}) {

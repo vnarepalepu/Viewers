@@ -1,46 +1,36 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import DicomHtmlViewport from './DicomHtmlViewport';
+import OHIF from '@ohif/core';
+import ConnectedDicomHtmlViewport from './ConnectedDicomHtmlViewport';
+
+const { DicomLoaderService } = OHIF.utils;
 
 class OHIFDicomHtmlViewport extends Component {
   static propTypes = {
     studies: PropTypes.object,
     displaySet: PropTypes.object,
-    viewportIndex: PropTypes.number
+    viewportIndex: PropTypes.number,
+    viewportData: PropTypes.object,
   };
 
   state = {
     byteArray: null,
-    error: null
+    error: null,
   };
 
   componentDidMount() {
-    const { displaySet } = this.props.viewportData;
-    const {
-      studyInstanceUid,
-      seriesInstanceUid,
-      sopInstanceUid,
-      wadoRoot,
-      wadoUri,
-      authorizationHeaders
-    } = displaySet;
+    const { displaySet, studies } = this.props.viewportData;
 
-    this.retrieveDicomData(
-      studyInstanceUid,
-      seriesInstanceUid,
-      sopInstanceUid,
-      wadoRoot,
-      wadoUri,
-      authorizationHeaders
-    ).then(
-      byteArray => {
+    DicomLoaderService.findDicomDataPromise(displaySet, studies).then(
+      data => {
+        const byteArray = new Uint8Array(data);
         this.setState({
-          byteArray
+          byteArray: byteArray,
         });
       },
       error => {
         this.setState({
-          error
+          error,
         });
 
         throw new Error(error);
@@ -48,32 +38,14 @@ class OHIFDicomHtmlViewport extends Component {
     );
   }
 
-  retrieveDicomData(
-    studyInstanceUid,
-    seriesInstanceUid,
-    sopInstanceUid,
-    wadoRoot,
-    wadoUri,
-    authorizationHeaders
-  ) {
-    // TODO: Passing in a lot of data we aren't using
-
-    // TODO: Authorization header depends on the server. If we ever have multiple servers
-    // we will need to figure out how / when to pass this information in.
-    return fetch(wadoUri, {
-      headers: authorizationHeaders
-    })
-      .then(response => response.arrayBuffer())
-      .then(arraybuffer => {
-        return new Uint8Array(arraybuffer);
-      });
-  }
-
   render() {
     return (
       <>
         {this.state.byteArray && (
-          <DicomHtmlViewport byteArray={this.state.byteArray} />
+          <ConnectedDicomHtmlViewport
+            byteArray={this.state.byteArray}
+            viewportIndex={this.props.viewportIndex}
+          />
         )}
         {this.state.error && <h2>{JSON.stringify(this.state.error)}</h2>}
       </>

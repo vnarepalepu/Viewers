@@ -1,16 +1,16 @@
-import React, { Component } from "react";
-import { getImageData, loadImageData } from "react-vtkjs-viewport";
+import React, { Component } from 'react';
+import { getImageData, loadImageData } from 'react-vtkjs-viewport';
 
-import ConnectedVTKViewport from "./ConnectedVTKViewport";
-import LoadingIndicator from "./LoadingIndicator.js";
-import OHIF from "@ohif/core";
-import PropTypes from "prop-types";
-import cornerstone from "cornerstone-core";
-import handleSegmentationStorage from "./handleSegmentationStorage.js";
-import vtkDataArray from "vtk.js/Sources/Common/Core/DataArray";
-import vtkImageData from "vtk.js/Sources/Common/DataModel/ImageData";
-import vtkVolume from "vtk.js/Sources/Rendering/Core/Volume";
-import vtkVolumeMapper from "vtk.js/Sources/Rendering/Core/VolumeMapper";
+import ConnectedVTKViewport from './ConnectedVTKViewport';
+import LoadingIndicator from './LoadingIndicator.js';
+import OHIF from '@ohif/core';
+import PropTypes from 'prop-types';
+import cornerstone from 'cornerstone-core';
+import handleSegmentationStorage from './handleSegmentationStorage.js';
+import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
+import vtkImageData from 'vtk.js/Sources/Common/DataModel/ImageData';
+import vtkVolume from 'vtk.js/Sources/Rendering/Core/Volume';
+import vtkVolumeMapper from 'vtk.js/Sources/Rendering/Core/VolumeMapper';
 
 const { StackManager } = OHIF.utils;
 
@@ -24,7 +24,7 @@ cornerstone.metaData.addProvider(
 StackManager.setMetadataProvider(metadataProvider);
 
 const SOP_CLASSES = {
-  SEGMENTATION_STORAGE: "1.2.840.10008.5.1.4.1.1.66.4"
+  SEGMENTATION_STORAGE: '1.2.840.10008.5.1.4.1.1.66.4',
 };
 
 const specialCaseHandlers = {};
@@ -42,7 +42,7 @@ const volumeCache = {};
  */
 function createLabelMapImageData(backgroundImageData) {
   const labelMapData = vtkImageData.newInstance(
-    backgroundImageData.get("spacing", "origin", "direction")
+    backgroundImageData.get('spacing', 'origin', 'direction')
   );
   labelMapData.setDimensions(backgroundImageData.getDimensions());
   labelMapData.computeTransforms();
@@ -50,7 +50,7 @@ function createLabelMapImageData(backgroundImageData) {
   const values = new Uint8Array(backgroundImageData.getNumberOfPoints());
   const dataArray = vtkDataArray.newInstance({
     numberOfComponents: 1, // labelmap with single component
-    values
+    values,
   });
   labelMapData.getPointData().setScalars(dataArray);
 
@@ -61,24 +61,37 @@ class OHIFVTKViewport extends Component {
   state = {
     volumes: null,
     paintFilterLabelMapImageData: null,
-    paintFilterBackgroundImageData: null
+    paintFilterBackgroundImageData: null,
   };
 
   static propTypes = {
-    studies: PropTypes.object,
-    displaySet: PropTypes.object,
+    viewportData: PropTypes.shape({
+      studies: PropTypes.array,
+      displaySet: PropTypes.shape({
+        studyInstanceUid: PropTypes.string,
+        displaySetInstanceUid: PropTypes.string,
+        sopClassUids: PropTypes.arrayOf(PropTypes.string),
+        sopInstanceUid: PropTypes.string,
+        frameIndex: PropTypes.number,
+      }),
+    }),
     viewportIndex: PropTypes.number,
-    children: PropTypes.node
+    children: PropTypes.node,
+    onScroll: PropTypes.func,
   };
 
-  static id = "OHIFVTKViewport";
+  static defaultProps = {
+    onScroll: () => {},
+  };
+
+  static id = 'OHIFVTKViewport';
 
   static init() {
-    console.log("OHIFVTKViewport init()");
+    console.log('OHIFVTKViewport init()');
   }
 
   static destroy() {
-    console.log("OHIFVTKViewport destroy()");
+    console.log('OHIFVTKViewport destroy()');
     StackManager.clearStacks();
   }
 
@@ -109,7 +122,7 @@ class OHIFVTKViewport extends Component {
     } else if (sopInstanceUid) {
       const index = stack.imageIds.findIndex(imageId => {
         const sopCommonModule = cornerstone.metaData.get(
-          "sopCommonModule",
+          'sopCommonModule',
           imageId
         );
         if (!sopCommonModule) {
@@ -151,8 +164,8 @@ class OHIFVTKViewport extends Component {
 
     switch (sopClassUid) {
       case SOP_CLASSES.SEGMENTATION_STORAGE:
-        throw new Error("Not yet implemented");
-
+        throw new Error('Not yet implemented');
+      /*
         const data = handleSegmentationStorage(
           stack.imageIds,
           displaySetInstanceUid
@@ -164,67 +177,88 @@ class OHIFVTKViewport extends Component {
         return loadImageData(imageDataObject).then(() => {
           return {
             data: imageDataObject.vtkImageData,
-            labelmap: labelmapDataObject
+            labelmap: labelmapDataObject,
           };
         });
+        */
       default:
         imageDataObject = getImageData(stack.imageIds, displaySetInstanceUid);
 
-        return loadImageData(imageDataObject).then(() => {
-          return {
-            data: imageDataObject.vtkImageData
-          };
-        });
+        return imageDataObject;
     }
   };
 
-  getOrCreateVolume(data, displaySetInstanceUid) {
+  /**
+   *
+   *
+   * @param {object} imageDataObject
+   * @param {object} imageDataObject.vtkImageData
+   * @param {object} imageDataObject.imageMetaData0
+   * @param {number} [imageDataObject.imageMetaData0.windowWidth] - The volume's initial windowWidth
+   * @param {number} [imageDataObject.imageMetaData0.windowCenter] - The volume's initial windowCenter
+   * @param {string} imageDataObject.imageMetaData0.modality - CT, MR, PT, etc
+   * @param {string} displaySetInstanceUid
+   * @returns vtkVolumeActor
+   * @memberof OHIFVTKViewport
+   */
+  getOrCreateVolume(imageDataObject, displaySetInstanceUid) {
     if (volumeCache[displaySetInstanceUid]) {
       return volumeCache[displaySetInstanceUid];
     }
 
+    const { vtkImageData, imageMetaData0 } = imageDataObject;
+    const { windowWidth, windowCenter, modality } = imageMetaData0;
+
+    const { lower, upper } = _getRangeFromWindowLevels(
+      windowWidth,
+      windowCenter,
+      modality
+    );
     const volumeActor = vtkVolume.newInstance();
     const volumeMapper = vtkVolumeMapper.newInstance();
 
     volumeActor.setMapper(volumeMapper);
-    volumeMapper.setInputData(data);
+    volumeMapper.setInputData(vtkImageData);
 
-    // TODO: Should look into implementing autoAdjustSampleDistance in vtk
-    const sampleDistance =
-      1.2 *
-      Math.sqrt(
-        data
-          .getSpacing()
-          .map((v) => v * v)
-          .reduce((a, b) => a + b, 0)
-      );
+    volumeActor
+      .getProperty()
+      .getRGBTransferFunction(0)
+      .setRange(lower, upper);
+
+    const spacing = vtkImageData.getSpacing();
+    // Set the sample distance to half the mean length of one side. This is where the divide by 6 comes from.
+    // https://github.com/Kitware/VTK/blob/6b559c65bb90614fb02eb6d1b9e3f0fca3fe4b0b/Rendering/VolumeOpenGL2/vtkSmartVolumeMapper.cxx#L344
+    const sampleDistance = (spacing[0] + spacing[1] + spacing[2]) / 6;
 
     volumeMapper.setSampleDistance(sampleDistance);
+
+    // Be generous to surpress warnings, as the logging really hurts performance.
+    // TODO: maybe we should auto adjust samples to 1000.
+    volumeMapper.setMaximumSamplesPerRay(4000);
 
     volumeCache[displaySetInstanceUid] = volumeActor;
 
     return volumeActor;
   }
 
-  async setStateFromProps() {
+  setStateFromProps() {
     const { studies, displaySet } = this.props.viewportData;
     const {
       studyInstanceUid,
       displaySetInstanceUid,
       sopClassUids,
       sopInstanceUid,
-      frameIndex
+      frameIndex,
     } = displaySet;
 
     if (sopClassUids.length > 1) {
       console.warn(
-        "More than one SOPClassUid in the same series is not yet supported."
+        'More than one SOPClassUid in the same series is not yet supported.'
       );
     }
 
     const sopClassUid = sopClassUids[0];
-
-    let { data, labelmap } = await this.getViewportData(
+    const imageDataObject = this.getViewportData(
       studies,
       studyInstanceUid,
       displaySetInstanceUid,
@@ -233,17 +267,45 @@ class OHIFVTKViewport extends Component {
       frameIndex
     );
 
-    if (!labelmap) {
-      labelmap = createLabelMapImageData(data);
-    }
+    this.imageDataObject = imageDataObject;
 
-    const volumeActor = this.getOrCreateVolume(data, displaySetInstanceUid);
+    // TODO: Temporarily disabling this since it is not yet
+    // being used and hurts performance significantly.
+    /*if (!labelmap) {
+      labelmap = createLabelMapImageData(data);
+    }*/
+
+    const volumeActor = this.getOrCreateVolume(
+      imageDataObject,
+      displaySetInstanceUid
+    );
 
     this.setState({
-      volumes: [volumeActor],
-      paintFilterBackgroundImageData: data,
-      paintFilterLabelMapImageData: labelmap
+      paintFilterBackgroundImageData: imageDataObject.vtkImageData,
+      paintFilterLabelMapImageData: null, // TODO
+      percentComplete: 0,
     });
+
+    this.setState(
+      {
+        paintFilterBackgroundImageData: imageDataObject.vtkImageData,
+        paintFilterLabelMapImageData: null, // TODO
+        percentComplete: 0,
+      },
+      () => {
+        this.loadProgressively(imageDataObject);
+
+        // TODO: There must be a better way to do this.
+        // We do this so that if all the data is available the react-vtkjs-viewport
+        // Will render _something_ before the volumes are set and the volume
+        // Construction that happens in react-vtkjs-viewport locks up the CPU.
+        setTimeout(() => {
+          this.setState({
+            volumes: [volumeActor],
+          });
+        }, 200);
+      }
+    );
   }
 
   componentDidMount() {
@@ -264,43 +326,108 @@ class OHIFVTKViewport extends Component {
     }
   }
 
+  loadProgressively(imageDataObject) {
+    loadImageData(imageDataObject);
+
+    const { isLoading, insertPixelDataPromises } = imageDataObject;
+
+    const numberOfFrames = insertPixelDataPromises.length;
+
+    if (!isLoading) {
+      this.setState({ isLoaded: true });
+      return;
+    }
+
+    insertPixelDataPromises.forEach(promise => {
+      promise.then(numberProcessed => {
+        const percentComplete = Math.floor(
+          (numberProcessed * 100) / numberOfFrames
+        );
+
+        if (percentComplete !== this.state.percentComplete) {
+          this.setState({
+            percentComplete,
+          });
+        }
+      });
+    });
+
+    Promise.all(insertPixelDataPromises).then(() => {
+      this.setState({ isLoaded: true });
+    });
+  }
+
   render() {
     let childrenWithProps = null;
 
     // TODO: Does it make more sense to use Context?
     if (this.props.children && this.props.children.length) {
       childrenWithProps = this.props.children.map((child, index) => {
-        return React.cloneElement(child, {
-          viewportIndex: this.props.viewportIndex,
-          key: index
-        });
+        return (
+          child &&
+          React.cloneElement(child, {
+            viewportIndex: this.props.viewportIndex,
+            key: index,
+          })
+        );
       });
     }
 
-    const style = { width: "100%", height: "100%", position: "relative" };
+    const style = { width: '100%', height: '100%', position: 'relative' };
 
     return (
       <>
-        {this.state.volumes ? (
-          <ConnectedVTKViewport
-            volumes={this.state.volumes}
-            paintFilterLabelMapImageData={
-              this.state.paintFilterLabelMapImageData
-            }
-            paintFilterBackgroundImageData={
-              this.state.paintFilterBackgroundImageData
-            }
-            viewportIndex={this.props.viewportIndex}
-          />
-        ) : (
-          <div style={style}>
-            <LoadingIndicator />
-          </div>
+        <div style={style}>
+          {!this.state.isLoaded && (
+            <LoadingIndicator percentComplete={this.state.percentComplete} />
+          )}
+          {this.state.volumes && (
+            <ConnectedVTKViewport
+              volumes={this.state.volumes}
+              paintFilterLabelMapImageData={
+                this.state.paintFilterLabelMapImageData
+              }
+              paintFilterBackgroundImageData={
+                this.state.paintFilterBackgroundImageData
+              }
+              viewportIndex={this.props.viewportIndex}
+              onScroll={this.props.onScroll}
+            />
+          )}
+        </div>
         )}
         {childrenWithProps}
       </>
     );
   }
+}
+
+/**
+ * Takes window levels and converts them to a range (lower/upper)
+ * for use with VTK RGBTransferFunction
+ *
+ * @private
+ * @param {number} [width] - the width of our window
+ * @param {number} [center] - the center of our window
+ * @param {string} [modality] - 'PT', 'CT', etc.
+ * @returns { lower, upper } - range
+ */
+function _getRangeFromWindowLevels(width, center, modality = undefined) {
+  const levelsAreNotNumbers = isNaN(center) || isNaN(width);
+
+  if (levelsAreNotNumbers) {
+    return { lower: 0, upper: 512 };
+  }
+
+  // For PET just set the range to 0-5 SUV
+  if (modality === 'PT') {
+    return { lower: 0, upper: 5 };
+  }
+
+  return {
+    lower: center - width / 2.0,
+    upper: center + width / 2.0,
+  };
 }
 
 export default OHIFVTKViewport;

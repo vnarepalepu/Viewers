@@ -30,7 +30,7 @@ function dateToString(date) {
 function getQIDOQueryParams(filter, serverSupportsQIDOIncludeField) {
   const commaSeparatedFields = [
     '00081030', // Study Description
-    '00080060', //Modality
+    '00080060', // Modality
     // Add more fields here if you want them in the result
   ].join(',');
 
@@ -118,6 +118,10 @@ export default function Studies(server, filter) {
   };
 
   const dicomWeb = new api.DICOMwebClient(config);
+  server.qidoSupportsIncludeField =
+    server.qidoSupportsIncludeField === undefined
+      ? true
+      : server.qidoSupportsIncludeField;
   const queryParams = getQIDOQueryParams(
     filter,
     server.qidoSupportsIncludeField

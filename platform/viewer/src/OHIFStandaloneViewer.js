@@ -7,36 +7,22 @@ import { CSSTransition } from 'react-transition-group';
 import { connect } from 'react-redux';
 import { ViewerbaseDragDropContext } from '@ohif/ui';
 import { SignoutCallbackComponent } from 'redux-oidc';
-// import asyncComponent from './components/AsyncComponent.js'
-import IHEInvokeImageDisplay from './routes/IHEInvokeImageDisplay.js';
-import ViewerRouting from './routes/ViewerRouting.js';
-import ViewerLocalFileData from './connectedComponents/ViewerLocalFileData.js';
-import StudyListRouting from './studylist/StudyListRouting.js';
-import StandaloneRouting from './routes/StandaloneRouting.js';
-import CallbackPage from './routes/CallbackPage.js';
+import asyncComponent from './components/AsyncComponent.js';
+import * as RoutesUtil from './routes/routesUtil';
+
 import NotFound from './routes/NotFound.js';
 import { Bar, Container } from './components/LoadingBar/';
 import './OHIFStandaloneViewer.css';
 import './variables.css';
 import './theme-tide.css';
-
-// Dynamic Import Routes (CodeSplitting)
-// const IHEInvokeImageDisplay = asyncComponent(() =>
-//   import('./routes/IHEInvokeImageDisplay.js')
-// )
-// const ViewerRouting = asyncComponent(() => import('./routes/ViewerRouting.js'))
-// const StudyListRouting = asyncComponent(() =>
-//   import('./studylist/StudyListRouting.js')
-// )
-// const StandaloneRouting = asyncComponent(() =>
-//   import('./routes/StandaloneRouting.js')
-// )
-// const CallbackPage = asyncComponent(() => import('./CallbackPage.js'))
-//
-
-const reload = () => window.location.reload();
+// Contexts
+import AppContext from './context/AppContext';
+const CallbackPage = asyncComponent(() =>
+  import(/* webpackChunkName: "CallbackPage" */ './routes/CallbackPage.js')
+);
 
 class OHIFStandaloneViewer extends Component {
+  static contextType = AppContext;
   state = {
     isLoading: false,
   };
@@ -63,7 +49,7 @@ class OHIFStandaloneViewer extends Component {
 
   render() {
     const { user, userManager } = this.props;
-
+    const { appConfig = {} } = this.context;
     const userNotLoggedIn = userManager && (!user || user.expired);
     if (userNotLoggedIn) {
       const pathname = this.props.location.pathname;
@@ -74,7 +60,11 @@ class OHIFStandaloneViewer extends Component {
 
       return (
         <Switch>
-          <Route exact path="/silent-refresh.html" onEnter={reload} />
+          <Route
+            exact
+            path="/silent-refresh.html"
+            onEnter={RoutesUtil.reload}
+          />
           <Route
             exact
             path="/logout-redirect"
@@ -92,6 +82,44 @@ class OHIFStandaloneViewer extends Component {
           <Route
             path="/callback"
             render={() => <CallbackPage userManager={userManager} />}
+          />
+          <Route
+            path="/login"
+            component={() => {
+              const queryParams = new URLSearchParams(
+                this.props.location.search
+              );
+              const iss = queryParams.get('iss');
+              const loginHint = queryParams.get('login_hint');
+              const targetLinkUri = queryParams.get('target_link_uri');
+              const oidcAuthority =
+                appConfig.oidc !== null && appConfig.oidc[0].authority;
+              if (iss !== oidcAuthority) {
+                console.error(
+                  'iss of /login does not match the oidc authority'
+                );
+                return null;
+              }
+
+              userManager.removeUser().then(() => {
+                if (targetLinkUri !== null) {
+                  sessionStorage.setItem(
+                    'ohif-redirect-to',
+                    new URL(targetLinkUri).pathname
+                  );
+                } else {
+                  sessionStorage.setItem('ohif-redirect-to', '/');
+                }
+
+                if (loginHint !== null) {
+                  userManager.signinRedirect({ login_hint: loginHint });
+                } else {
+                  userManager.signinRedirect();
+                }
+              });
+
+              return null;
+            }}
           />
           <Route
             component={() => {
@@ -116,43 +144,7 @@ class OHIFStandaloneViewer extends Component {
      *
      * See http://reactcommunity.org/react-transition-group/with-react-router/
      */
-    const routes = [
-      {
-        path: '/local',
-        Component: ViewerLocalFileData,
-      },
-      {
-        path: '/viewer',
-        Component: StandaloneRouting,
-      },
-      {
-        path: '/viewer/:studyInstanceUids',
-        Component: ViewerRouting,
-      },
-      {
-        path: '/study/:studyInstanceUids/series/:seriesInstanceUids',
-        Component: ViewerRouting,
-      },
-      {
-        path: '/IHEInvokeImageDisplay',
-        Component: IHEInvokeImageDisplay,
-      },
-    ];
-
-    const showStudyList =
-      window.config && window.config.showStudyList !== undefined
-        ? window.config.showStudyList
-        : true;
-    if (showStudyList) {
-      routes.push({
-        path: '/studylist',
-        Component: StudyListRouting,
-      });
-      routes.push({
-        path: '/',
-        Component: StudyListRouting,
-      });
-    }
+    const routes = RoutesUtil.getRoutes(appConfig);
 
     const currentPath = this.props.location.pathname;
     const noMatchingRoutes = !routes.find(r =>
@@ -174,8 +166,8 @@ class OHIFStandaloneViewer extends Component {
             </Container>
           )}
         </NProgress>
-        <Route exact path="/silent-refresh.html" onEnter={reload} />
-        <Route exact path="/logout-redirect.html" onEnter={reload} />
+        <Route exact path="/silent-refresh.html" onEnter={RoutesUtil.reload} />
+        <Route exact path="/logout-redirect.html" onEnter={RoutesUtil.reload} />
         {!noMatchingRoutes &&
           routes.map(({ path, Component }) => (
             <Route key={path} exact path={path}>
@@ -186,10 +178,14 @@ class OHIFStandaloneViewer extends Component {
                   classNames="fade"
                   unmountOnExit
                   onEnter={() => {
-                    this.setState({ isLoading: true });
+                    this.setState({
+                      isLoading: true,
+                    });
                   }}
                   onEntered={() => {
-                    this.setState({ isLoading: false });
+                    this.setState({
+                      isLoading: false,
+                    });
                   }}
                 >
                   {match === null ? (

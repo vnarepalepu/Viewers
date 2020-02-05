@@ -30,6 +30,7 @@ import edit from './icons/edit.svg';
 import ellipseCircle from './icons/ellipse-circle.svg';
 import ellipseH from './icons/ellipse-h.svg';
 import ellipseV from './icons/ellipse-v.svg';
+import eraser from './icons/eraser.svg';
 import exclamationCircle from './icons/exclamation-circle.svg';
 import exclamationTriangle from './icons/exclamation-triangle.svg';
 import fastBackward from './icons/fast-backward.svg';
@@ -52,6 +53,7 @@ import measureTargetUn from './icons/measure-target-un.svg';
 import measureTemp from './icons/measure-temp.svg';
 import objectGroup from './icons/object-group.svg';
 import ohifLogo from './icons/ohif-logo.svg';
+import ohifTextLogo from './icons/ohif-text-logo.svg';
 import oval from './icons/oval.svg';
 import palette from './icons/palette.svg';
 import play from './icons/play.svg';
@@ -60,6 +62,7 @@ import powerOff from './icons/power-off.svg';
 import reset from './icons/reset.svg';
 import rotate from './icons/rotate.svg';
 import rotateRight from './icons/rotate-right.svg';
+import saveRegular from './icons/save-regular.svg';
 import search from './icons/search.svg';
 import searchPlus from './icons/search-plus.svg';
 import softTissue from './icons/soft-tissue.svg';
@@ -77,6 +80,7 @@ import thLarge from './icons/th-large.svg';
 import thList from './icons/th-list.svg';
 import times from './icons/times.svg';
 import trash from './icons/trash.svg';
+import unlink from './icons/unlink.svg';
 import user from './icons/user.svg';
 import youtube from './icons/youtube.svg';
 
@@ -110,6 +114,7 @@ const ICONS = {
   'create-comment': createComment,
   'create-screen-capture': createScreenCapture,
   edit,
+  eraser,
   'fast-backward': fastBackward,
   'fast-forward': fastForward,
   'object-group': objectGroup,
@@ -118,6 +123,7 @@ const ICONS = {
   'inline-edit': inlineEdit,
   list,
   'ohif-logo': ohifLogo,
+  'ohif-text-logo': ohifTextLogo,
   lock,
   play,
   database,
@@ -153,6 +159,7 @@ const ICONS = {
   rotate,
   'rotate-right': rotateRight,
   trash,
+  unlink,
   'exclamation-circle': exclamationCircle,
   link,
   'exclamation-triangle': exclamationTriangle,
@@ -160,6 +167,7 @@ const ICONS = {
   'soft-tissue': softTissue,
   lung,
   liver,
+  save: saveRegular,
 };
 
 /**

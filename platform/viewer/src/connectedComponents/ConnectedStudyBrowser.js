@@ -1,6 +1,9 @@
+import OHIF from '@ohif/core';
 import { connect } from 'react-redux';
 import { StudyBrowser } from '@ohif/ui';
 import cloneDeep from 'lodash.clonedeep';
+
+const { setActiveViewportSpecificData } = OHIF.redux.actions;
 
 // TODO
 // - Determine in which display set is active from Redux (activeViewportIndex and layout viewportData)
@@ -32,9 +35,21 @@ const mapStateToProps = (state, ownProps) => {
   };
 };
 
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    onThumbnailClick: displaySetInstanceUid => {
+      const displaySet = ownProps.studyMetadata[0].displaySets.find(
+        ds => ds.displaySetInstanceUid === displaySetInstanceUid
+      );
+
+      dispatch(setActiveViewportSpecificData(displaySet));
+    },
+  };
+};
+
 const ConnectedStudyBrowser = connect(
   mapStateToProps,
-  null
+  mapDispatchToProps
 )(StudyBrowser);
 
 export default ConnectedStudyBrowser;

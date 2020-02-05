@@ -1,18 +1,39 @@
 import cornerstoneTools from 'cornerstone-tools';
+import cornerstone from 'cornerstone-core';
 import log from '../../log';
 import getLabel from '../lib/getLabel';
 import getDescription from '../lib/getDescription';
 import getImageIdForImagePath from '../lib/getImageIdForImagePath';
 import guid from '../../utils/guid';
 import studyMetadataManager from '../../utils/studyMetadataManager';
+import { measurementApiDefaultConfig } from './../configuration.js';
+
 
 const configuration = {
-  measurementTools: [],
+  ...measurementApiDefaultConfig
 };
 
 export default class MeasurementApi {
   static Instance;
 
+  /**
+   * Set configuration: It should merge default configuration with any new one
+   *
+   * @static
+   * @param {Object} config
+   * @param {Object} config.server
+   * @param {string} config.server.type - The server type
+   * @param {string} config.server.wadoRoot - The server wado URL root
+   * @param {Array} config.measurementTools
+   * @param {string} config.measurementTools[].id - The tool group id
+   * @param {string} config.measurementTools[].name - The tool group name
+   * @param {Array} config.measurementTools[].childTools - The child tool's configuration
+   * @param {Object} config.dataExchange
+   * @param {Function} config.dataExchange.store - Function that store measurement data
+   * @param {Function} config.dataExchange.retrieve - Function that retrieves measurement data
+   *
+   * @memberof MeasurementApi
+   */
   static setConfiguration(config) {
     Object.assign(configuration, config);
   }
@@ -202,13 +223,14 @@ export default class MeasurementApi {
 
   retrieveMeasurements(patientId, timepointIds) {
     const retrievalFn = configuration.dataExchange.retrieve;
+    const { server } = configuration;
     if (typeof retrievalFn !== 'function') {
       log.error('Measurement retrieval function has not been configured.');
       return;
     }
 
     return new Promise((resolve, reject) => {
-      retrievalFn(patientId, timepointIds).then(measurementData => {
+      retrievalFn(server).then(measurementData => {
         if (measurementData) {
           log.info('Measurement data retrieval');
           log.info(measurementData);
@@ -229,6 +251,10 @@ export default class MeasurementApi {
         // Synchronize the new tool data
         this.syncMeasurementsAndToolData();
 
+        cornerstone.getEnabledElements().forEach(enabledElement => {
+          cornerstone.updateImage(enabledElement.element);
+        });
+
         // Let others know that the measurements are updated
         this.onMeasurementsUpdated();
       }, reject);
@@ -236,6 +262,7 @@ export default class MeasurementApi {
   }
 
   storeMeasurements(timepointId) {
+    const { server } = configuration;
     const storeFn = configuration.dataExchange.store;
     if (typeof storeFn !== 'function') {
       log.error('Measurement store function has not been configured.');
@@ -277,8 +304,9 @@ export default class MeasurementApi {
     };
 
     log.info('Saving Measurements for timepoints:', timepoints);
-    return storeFn(measurementData, filter).then(() => {
+    return storeFn(measurementData, filter, server).then(result => {
       log.info('Measurement storage completed');
+      return result;
     });
   }
 

@@ -1,8 +1,10 @@
 window.config = {
   // default: '/'
   routerBasename: '/',
+  whiteLabelling: {},
   extensions: [],
   showStudyList: true,
+  filterQueryParam: false,
   servers: {
     dicomWeb: [
       {
@@ -13,9 +15,7 @@ window.config = {
         qidoSupportsIncludeField: true,
         imageRendering: 'wadors',
         thumbnailRendering: 'wadors',
-        requestOptions: {
-          requestFromBrowser: true,
-        },
+        enableStudyLazyLoad: true,
       },
     ],
   },
@@ -70,4 +70,5 @@ window.config = {
     // ~ Cornerstone Tools
     { commandName: 'setZoomTool', label: 'Zoom', keys: ['z'] },
   ],
+  cornerstoneExtensionConfig: {},
 };

@@ -3,8 +3,6 @@
 // - Include SVG Source/Inline?
 // - By URL, or own component?
 
-// TODO: `ohif-core` toolbar builder?
-
 // What KINDS of toolbar buttons do we have...
 // - One's that dispatch commands
 // - One's that set tool's active
@@ -23,6 +21,17 @@ const TOOLBAR_BUTTON_TYPES = {
   COMMAND: 'command',
   SET_TOOL_ACTIVE: 'setToolActive',
   BUILT_IN: 'builtIn',
+};
+
+const TOOLBAR_BUTTON_BEHAVIORS = {
+  CINE: 'CINE',
+  DOWNLOAD_SCREEN_SHOT: 'DOWNLOAD_SCREEN_SHOT',
+};
+
+/* TODO: Export enums through a extension manager. */
+const enums = {
+  TOOLBAR_BUTTON_TYPES,
+  TOOLBAR_BUTTON_BEHAVIORS,
 };
 
 const definitions = [
@@ -72,6 +81,15 @@ const definitions = [
     commandOptions: { toolName: 'Length' },
   },
   {
+    id: 'ArrowAnnotate',
+    label: 'Annotate',
+    icon: 'measure-non-target',
+    //
+    type: TOOLBAR_BUTTON_TYPES.SET_TOOL_ACTIVE,
+    commandName: 'setToolActive',
+    commandOptions: { toolName: 'ArrowAnnotate' },
+  },
+  {
     id: 'Angle',
     label: 'Angle',
     icon: 'angle-left',
@@ -95,7 +113,7 @@ const definitions = [
     //
     type: TOOLBAR_BUTTON_TYPES.BUILT_IN,
     options: {
-      behavior: 'CINE',
+      behavior: TOOLBAR_BUTTON_BEHAVIORS.CINE,
     },
   },
   {
@@ -188,8 +206,46 @@ const definitions = [
         type: TOOLBAR_BUTTON_TYPES.COMMAND,
         commandName: 'clearAnnotations',
       },
+      {
+        id: 'Bidirectional',
+        label: 'Bidirectional',
+        icon: 'measure-target',
+        //
+        type: TOOLBAR_BUTTON_TYPES.SET_TOOL_ACTIVE,
+        commandName: 'setToolActive',
+        commandOptions: { toolName: 'Bidirectional' },
+      },
+      {
+        id: 'Eraser',
+        label: 'Eraser',
+        icon: 'eraser',
+        //
+        type: TOOLBAR_BUTTON_TYPES.SET_TOOL_ACTIVE,
+        commandName: 'setToolActive',
+        commandOptions: { toolName: 'Eraser' },
+      },
+      {
+        id: 'Download',
+        label: 'Download',
+        icon: 'create-screen-capture',
+        //
+        type: TOOLBAR_BUTTON_TYPES.BUILT_IN,
+        options: {
+          behavior: TOOLBAR_BUTTON_BEHAVIORS.DOWNLOAD_SCREEN_SHOT,
+          togglable: true,
+        },
+      },
     ],
   },
+  {
+    id: 'Exit2DMPR',
+    label: 'Exit 2D MPR',
+    icon: 'times',
+    //
+    type: TOOLBAR_BUTTON_TYPES.COMMAND,
+    commandName: 'setCornerstoneLayout',
+    context: 'ACTIVE_VIEWPORT::VTK',
+  }
 ];
 
 export default {

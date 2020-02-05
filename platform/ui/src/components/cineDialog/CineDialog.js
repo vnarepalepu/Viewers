@@ -1,7 +1,7 @@
 import './CineDialog.styl';
 
 import React, { PureComponent } from 'react';
-import { withTranslation } from '../../utils/LanguageProvider';
+import { withTranslation } from '../../contextProviders';
 import { Icon } from './../../elements/Icon';
 import PropTypes from 'prop-types';
 
@@ -121,11 +121,6 @@ class CineDialog extends PureComponent {
     }
   };
 
-  // TODO:
-  // - Add next / previous display set buttons which just call
-  // onClickNextDisplaySet and onClickPreviousDisplaySet which are passed in as props.
-  // See https://github.com/OHIF/Viewers/blob/master/Packages/ohif-viewerbase/client/components/viewer/cineDialog/cineDialog.html#L38
-  // - Add 'isEnabled' prop: https://github.com/OHIF/Viewers/blob/master/Packages/ohif-viewerbase/client/components/viewer/cineDialog/cineDialog.js#L301
   render() {
     const { t } = this.props;
     return (

@@ -1,5 +1,6 @@
 window.config = {
   routerBasename: '/pwa',
+  whiteLabelling: {},
   showStudyList: true,
   servers: {
     dicomWeb: [
@@ -11,9 +12,7 @@ window.config = {
         qidoSupportsIncludeField: true,
         imageRendering: 'wadors',
         thumbnailRendering: 'wadors',
-        requestOptions: {
-          requestFromBrowser: true,
-        },
+        enableStudyLazyLoad: true,
       },
     ],
   },

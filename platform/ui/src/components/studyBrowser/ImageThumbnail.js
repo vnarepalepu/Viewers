@@ -1,6 +1,8 @@
+/* global cornerstone */
 import './ImageThumbnail.styl';
 
-import React, { PureComponent } from 'react';
+import { utils } from '@ohif/core';
+import React, { useState, useEffect, createRef } from 'react';
 
 import PropTypes from 'prop-types';
 import ViewportErrorIndicator from '../../viewer/ViewportErrorIndicator';
@@ -11,126 +13,132 @@ import ViewportLoadingIndicator from '../../viewer/ViewportLoadingIndicator';
 // - Set as external dependency?
 // - Pass in the entire load and render function as a prop?
 //import cornerstone from 'cornerstone-core';
+function ImageThumbnail(props) {
+  const {
+    width,
+    height,
+    imageSrc,
+    imageId,
+    stackPercentComplete,
+    error: propsError,
+  } = props;
 
-/**
- * Asynchronous wrapper around Cornerstone's renderToCanvas method.
- *
- * @param {HTMLElement} canvasElement An HTML <canvas> element
- * @param {Image} image A Cornerstone Image
- *
- * @return {Promise} A promise tracking the progress of the rendering. Resolves empty.
- */
-function renderAsync(canvasElement, image) {
-  return new Promise((resolve, reject) => {
-    try {
-      cornerstone.renderToCanvas(canvasElement, image);
-      resolve();
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
+  const [isLoading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [image, setImage] = useState({});
+  const canvasRef = createRef();
 
-export default class ImageThumbnail extends PureComponent {
-  static propTypes = {
-    imageSrc: PropTypes.string,
-    imageId: PropTypes.string,
-    error: PropTypes.bool.isRequired,
-    width: PropTypes.number.isRequired,
-    height: PropTypes.number.isRequired,
-    stackPercentComplete: PropTypes.number.isRequired,
-  };
+  let loadingOrError;
+  let cancelablePromise;
 
-  static defaultProps = {
-    error: false,
-    stackPercentComplete: 0,
-    width: 217,
-    height: 123,
-  };
-
-  constructor(props) {
-    super(props);
-
-    this.canvas = React.createRef();
-
-    const renderIntoCanvas = this.props.imageId && !this.props.imageSrc;
-
-    this.state = {
-      loading: renderIntoCanvas,
-    };
+  if (propsError || error) {
+    loadingOrError = <ViewportErrorIndicator />;
+  } else if (isLoading) {
+    loadingOrError = <ViewportLoadingIndicator />;
   }
 
-  componentDidMount() {
-    const renderIntoCanvas = this.props.imageId && !this.props.imageSrc;
+  const showStackLoadingProgressBar = stackPercentComplete !== undefined;
 
-    if (renderIntoCanvas) {
-      const { imageId } = this.props;
-      const canvas = this.canvas.current;
+  const shouldRenderToCanvas = () => {
+    return imageId && !imageSrc;
+  };
 
-      cornerstone.loadAndCacheImage(imageId).then(
-        image => {
-          renderAsync(canvas, image).then(
-            () => {
-              this.setState({
-                loading: false,
-              });
-            },
-            error => {
-              // TODO: Set state?
-              throw new Error(error);
-            }
-          );
-        },
-        error => {
-          // TODO: Set state?
-          throw new Error(error);
-        }
+  const fetchImagePromise = () => {
+    if (!cancelablePromise) {
+      return;
+    }
+
+    setLoading(true);
+    cancelablePromise
+      .then(response => {
+        setImage(response);
+      })
+      .catch(error => {
+        if (error.isCanceled) return;
+        setLoading(false);
+        setError(true);
+        throw new Error(error);
+      });
+  };
+
+  const setImagePromise = () => {
+    if (shouldRenderToCanvas()) {
+      cancelablePromise = utils.makeCancelable(
+        cornerstone.loadAndCacheImage(imageId)
       );
     }
-  }
+  };
 
-  render() {
-    let loadingOrError;
-    if (this.props.error) {
-      loadingOrError = <ViewportErrorIndicator />;
-    } else if (this.state.loading) {
-      loadingOrError = <ViewportLoadingIndicator />;
+  const purgeCancelablePromise = () => {
+    if (cancelablePromise) {
+      cancelablePromise.cancel();
     }
+  };
 
-    const showStackLoadingProgressBar =
-      this.props.stackPercentComplete !== undefined;
+  useEffect(() => {
+    return () => {
+      purgeCancelablePromise();
+    };
+  }, []);
 
-    const renderIntoCanvas = this.props.imageId && !this.props.imageSrc;
+  useEffect(() => {
+    if (image.imageId) {
+      cornerstone.renderToCanvas(canvasRef.current, image);
+      setLoading(false);
+    }
+  }, [image.imageId]);
 
-    return (
-      <div className="ImageThumbnail">
-        <div className="image-thumbnail-canvas">
-          {renderIntoCanvas ? (
-            <canvas
-              ref={this.canvas}
-              width={this.props.width}
-              height={this.props.height}
-            />
-          ) : (
+  useEffect(() => {
+    if (!image.imageId || image.imageId !== imageId) {
+      purgeCancelablePromise();
+      setImagePromise();
+      fetchImagePromise();
+    }
+  }, [imageId]);
+
+  return (
+    <div className="ImageThumbnail">
+      <div className="image-thumbnail-canvas">
+        {shouldRenderToCanvas() ? (
+          <canvas ref={canvasRef} width={width} height={height} />
+        ) : (
             <img
               className="static-image"
-              src={this.props.imageSrc}
+              src={imageSrc}
               //width={this.props.width}
-              height={this.props.height}
+              height={height}
               alt={''}
             />
           )}
-        </div>
-        {loadingOrError}
-        {showStackLoadingProgressBar && (
-          <div className="image-thumbnail-progress-bar">
-            <div
-              className="image-thumbnail-progress-bar-inner"
-              style={{ width: `${this.props.stackPercentComplete}%` }}
-            />
-          </div>
-        )}
       </div>
-    );
-  }
+      {loadingOrError}
+      {showStackLoadingProgressBar && (
+        <div className="image-thumbnail-progress-bar">
+          <div
+            className="image-thumbnail-progress-bar-inner"
+            style={{ width: `${stackPercentComplete}%` }}
+          />
+        </div>
+      )}
+      {isLoading && <div className="image-thumbnail-loading-indicator"></div>}
+    </div>
+  );
 }
+
+ImageThumbnail.propTypes = {
+  imageSrc: PropTypes.string,
+  imageId: PropTypes.string,
+  error: PropTypes.bool,
+  width: PropTypes.number,
+  height: PropTypes.number,
+  stackPercentComplete: PropTypes.number.isRequired,
+};
+
+ImageThumbnail.defaultProps = {
+  error: false,
+  stackPercentComplete: 0,
+  width: 217,
+  height: 123,
+};
+
+export default ImageThumbnail;

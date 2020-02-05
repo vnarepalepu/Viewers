@@ -1,6 +1,6 @@
-import OHIF from "@ohif/core";
-import { View2D } from "react-vtkjs-viewport";
-import { connect } from "react-redux";
+import OHIF from '@ohif/core';
+import { connect } from 'react-redux';
+import VTKViewport from './VTKViewport';
 
 const { setViewportActive, setViewportSpecificData } = OHIF.redux.actions;
 
@@ -18,13 +18,14 @@ const mapStateToProps = (state, ownProps) => {
   const pluginDetails = viewportLayout.vtk || {};
 
   return {
+    activeViewportIndex: state.viewports.activeViewportIndex,
     layout: state.viewports.layout,
     isActive,
     ...pluginDetails,
     // Hopefully this doesn't break anything under the hood for this one
     // activeTool: activeButton && activeButton.command,
     ...dataFromStore,
-    enableStackPrefetch: isActive
+    enableStackPrefetch: isActive,
   };
 };
 
@@ -38,7 +39,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
     setViewportSpecificData: data => {
       dispatch(setViewportSpecificData(viewportIndex, data));
-    }
+    },
   };
 };
 
@@ -63,10 +64,10 @@ const mergeProps = (propsFromState, propsFromDispatch, ownProps) => {
       // Store the API details for later
       //setViewportSpecificData({ vtkApi: api });
 
-      if (afterCreation && typeof afterCreation === "function") {
+      if (afterCreation && typeof afterCreation === 'function') {
         afterCreation(api);
       }
-    }
+    },
   };
   return props;
 };
@@ -75,6 +76,6 @@ const ConnectedVTKViewport = connect(
   mapStateToProps,
   mapDispatchToProps,
   mergeProps
-)(View2D);
+)(VTKViewport);
 
 export default ConnectedVTKViewport;

@@ -1,6 +1,7 @@
 window.config = {
   // default: '/'
   routerBasename: '/',
+  whiteLabelling: {},
   // default: ''
   showStudyList: true,
   servers: {
@@ -14,11 +15,10 @@ window.config = {
         imageRendering: 'wadors',
         thumbnailRendering: 'wadors',
         requestOptions: {
-          requestFromBrowser: true,
           auth: 'admin:admin',
         },
       },
     ],
   },
   studyListFunctionsEnabled: true,
-}
+};
